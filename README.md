@@ -23,12 +23,10 @@ LexicalAnalyser is a compiler construction project that performs lexical analysi
 ## Screenshots
 
 ### Homepage
-
-![LexicalAnalyser Homepage](screenshots/HomePage.jpeg)
+![LexiScan Homepage](screenshots/HomePage.jpeg)
 
 ### Output
-
-![LexicalAnalyser Output](screenshots/Output.jpeg)
+![LexiScan Output](screenshots/Output.jpeg)
 
 ## Project Structure
 
