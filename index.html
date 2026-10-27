@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LexiScan &mdash; Lexical Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+
+<!-- ============ NAVBAR ============ -->
+<header class="navbar">
+  <div class="navbar__brand">
+    <span class="navbar__mark">&lt;/&gt;</span>
+    <span class="navbar__name">LexiScan</span>
+  </div>
+  <nav class="navbar__links">
+    <a href="#dashboard" class="navlink navlink--active" data-nav="dashboard">Dashboard</a>
+    <a href="#history" class="navlink" data-nav="history">History</a>
+    <button class="navlink navlink--btn" id="aboutBtn" type="button">About</button>
+  </nav>
+  <div class="navbar__actions">
+    <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">
+      <svg id="iconMoon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg id="iconSun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    </button>
+    <span class="kbd-hint">Ctrl+Enter to analyze</span>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="hero__text">
+    <p class="hero__eyebrow">Compiler Construction &middot; Lexical Analysis</p>
+    <h1 class="hero__title">Every token, <span class="grad-text">classified</span>.</h1>
+    <p class="hero__sub">Paste or upload C/C++ source code. LexiScan's C++ engine scans it character by character and returns keywords, identifiers, literals, operators, and errors &mdash; with line numbers.</p>
+    <div class="hero__cta">
+      <button class="btn btn--ghost" id="heroSampleBtn" type="button">Try sample code</button>
+      <a href="#dashboard" class="btn btn--gradient">Open analyzer &rarr;</a>
+    </div>
+  </div>
+  <div class="hero__demo" aria-hidden="true">
+    <div class="token-stream" id="tokenStream"><!-- animated token chips injected by JS --></div>
+  </div>
+</section>
+
+<!-- ============ MAIN DASHBOARD ============ -->
+<main class="dashboard" id="dashboard">
+
+  <!-- Stat cards -->
+  <section class="stats-grid" id="statsGrid">
+    <div class="stat-card" data-stat="keywords"><span class="stat-card__value">0</span><span class="stat-card__label">Keywords</span></div>
+    <div class="stat-card" data-stat="identifiers"><span class="stat-card__value">0</span><span class="stat-card__label">Identifiers</span></div>
+    <div class="stat-card" data-stat="operators"><span class="stat-card__value">0</span><span class="stat-card__label">Operators</span></div>
+    <div class="stat-card" data-stat="delimiters"><span class="stat-card__value">0</span><span class="stat-card__label">Delimiters</span></div>
+    <div class="stat-card" data-stat="numbers"><span class="stat-card__value">0</span><span class="stat-card__label">Numbers</span></div>
+    <div class="stat-card" data-stat="strings"><span class="stat-card__value">0</span><span class="stat-card__label">Strings</span></div>
+    <div class="stat-card" data-stat="comments"><span class="stat-card__value">0</span><span class="stat-card__label">Comments</span></div>
+    <div class="stat-card stat-card--error" data-stat="errors"><span class="stat-card__value">0</span><span class="stat-card__label">Errors</span></div>
+  </section>
+
+  <!-- Editor + Results grid -->
+  <section class="workspace">
+
+    <!-- LEFT: source editor -->
+    <div class="panel panel--editor">
+      <div class="panel__header">
+        <span class="panel__title">Source</span>
+        <div class="panel__header-actions">
+          <button class="icon-text-btn" id="sampleBtn" type="button">Sample</button>
+          <button class="icon-text-btn" id="copyBtn" type="button">Copy</button>
+        </div>
+      </div>
+
+      <div class="editor-shell" id="dropZone">
+        <div class="editor-gutter" id="editorGutter">1</div>
+        <textarea id="sourceInput" class="editor-input" spellcheck="false"
+          placeholder="Paste C/C++ source code here, or drag &amp; drop a .c / .cpp file..."></textarea>
+        <div class="drop-overlay" id="dropOverlay">
+          <p>Drop your .c / .cpp file to load it</p>
+        </div>
+      </div>
+
+      <div class="editor-filename" id="editorFilename" style="display:none;"></div>
+
+      <div class="panel__footer">
+        <label class="upload-btn">
+          <input type="file" id="fileInput" accept=".c,.cpp,.cc,.h,.hpp,.txt" hidden>
+          Upload file
+        </label>
+        <button class="btn btn--ghost btn--small" id="clearBtn" type="button">Clear</button>
+        <button class="btn btn--gradient btn--grow" id="analyzeBtn" type="button">
+          <span id="analyzeLabel">Analyze</span>
+          <span class="spinner" id="analyzeSpinner" style="display:none;"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- RIGHT: results -->
+    <div class="panel panel--results">
+      <div class="panel__header">
+        <div class="tabs" id="resultTabs">
+          <button class="tab tab--active" data-tab="tokens">Tokens</button>
+          <button class="tab" data-tab="symbols">Symbol Table</button>
+          <button class="tab" data-tab="errors">Errors <span class="tab__badge" id="errorTabBadge" style="display:none;">0</span></button>
+        </div>
+        <div class="panel__header-actions">
+          <div class="download-menu">
+            <button class="icon-text-btn" id="downloadBtn" type="button">Download &darr;</button>
+            <div class="download-menu__list" id="downloadMenu">
+              <button data-format="json">JSON report</button>
+              <button data-format="txt">TXT report</button>
+              <button data-format="csv">CSV report</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tokens tab -->
+      <div class="tab-panel tab-panel--active" id="tab-tokens">
+        <div class="table-controls">
+          <input type="search" id="tokenSearch" placeholder="Filter tokens (lexeme or type)&hellip;" class="search-input">
+          <select id="tokenTypeFilter" class="select-input">
+            <option value="">All types</option>
+          </select>
+        </div>
+        <div class="table-scroll">
+          <table class="token-table" id="tokenTable">
+            <thead>
+              <tr>
+                <th data-sort="type">Token Type</th>
+                <th data-sort="lexeme">Lexeme</th>
+                <th data-sort="line">Line</th>
+              </tr>
+            </thead>
+            <tbody id="tokenTableBody">
+              <tr class="empty-row"><td colspan="3">No tokens yet &mdash; analyze some source code to see results here.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Symbol table tab -->
+      <div class="tab-panel" id="tab-symbols">
+        <div class="table-scroll">
+          <table class="token-table" id="symbolTable">
+            <thead>
+              <tr><th>#</th><th>Identifier</th><th>First Line</th><th>Occurrences</th></tr>
+            </thead>
+            <tbody id="symbolTableBody">
+              <tr class="empty-row"><td colspan="4">No identifiers yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Errors tab -->
+      <div class="tab-panel" id="tab-errors">
+        <div class="error-list" id="errorList">
+          <p class="empty-note">No lexical errors yet.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- History -->
+  <section class="panel panel--history" id="history">
+    <div class="panel__header">
+      <span class="panel__title">Recent Analyses</span>
+      <button class="icon-text-btn" id="refreshHistoryBtn" type="button">Refresh</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <p class="empty-note">No saved analyses yet. Run an analysis to see it appear here.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>LexiScan &middot; Compiler Construction Mini Project &middot; C++ &bull; Node.js &bull; Express &bull; Vanilla JS</p>
+</footer>
+
+<!-- ============ ABOUT MODAL ============ -->
+<div class="modal-backdrop" id="aboutModalBackdrop">
+  <div class="modal">
+    <button class="modal__close" id="aboutModalClose" aria-label="Close">&times;</button>
+    <h2>About LexiScan</h2>
+    <p>LexiScan performs the <strong>lexical analysis</strong> phase of a compiler: it scans C/C++ source code and groups the raw characters into <em>tokens</em> &mdash; keywords, identifiers, literals, operators, and delimiters &mdash; while ignoring whitespace and comments.</p>
+    <p>The scanning engine is a hand-written C++ program (no regex, no external parsing libraries). An Express/Node.js server acts as the middleware: it receives source code or an uploaded file from this browser interface, runs the compiled C++ analyzer as a child process, and returns its JSON result.</p>
+    <h3>Keyboard shortcuts</h3>
+    <ul class="shortcut-list">
+      <li><kbd>Ctrl</kbd> + <kbd>Enter</kbd> Analyze current source</li>
+      <li><kbd>Ctrl</kbd> + <kbd>K</kbd> Focus token search</li>
+      <li><kbd>Ctrl</kbd> + <kbd>Backspace</kbd> Clear editor</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ TOAST CONTAINER ============ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
